@@ -12,7 +12,7 @@ def kmeans(features: np.ndarray, num_clusters: int, normalize_rows: bool = False
     """
     if normalize_rows:
         features = features / np.linalg.norm(features, axis=1).reshape((-1, 1))
-    _, clusters, _ = k_means(features, num_clusters)
+    _, clusters, _ = k_means(features, num_clusters, n_init='auto')
     return clusters
 
 

@@ -1,15 +1,15 @@
 import torch
 import numpy as np
 import scipy as sp
-from SC_helpers import kmeans, compute_top_eigen, compute_laplacian
+from .SC_helpers import kmeans, compute_top_eigen, compute_laplacian
 from scipy.linalg import null_space, eigh, sqrtm
 from scipy.sparse.linalg import spsolve
-from utils import *
+from .utils import *
 import copy
 
 eps = torch.tensor(1.0e-10)
 
-def iFairNMTF(A: torch.tensor, L: torch.tensor, Ln: torch.tensor, Lp: torch.tensor, k, lam, iter=500):
+def iFairNMTF(A: torch.tensor, groups: np.ndarray, k, lam, iter=500):
     
     """
     :param A: (num_nodes, num_nodes) Adjacency matrix of the observed graph
@@ -29,7 +29,7 @@ def iFairNMTF(A: torch.tensor, L: torch.tensor, Ln: torch.tensor, Lp: torch.tens
     # W = torch.rand(k, k, dtype=torch.float)
     W = svd_init(A, k)
 
-    #L, Ln, Lp = joint_Laplacian(groups) # for optimized computations this is moved to experiments
+    L, Ln, Lp = joint_Laplacian(groups)
 
     err = torch.zeros(iter)
 
@@ -47,7 +47,7 @@ def iFairNMTF(A: torch.tensor, L: torch.tensor, Ln: torch.tensor, Lp: torch.tens
     import matplotlib.pyplot as plt
     plt.plot(err)
 
-    return H, W, err
+    return torch.argmax(H, dim=1).numpy()
 
 
 def ind_fair_sc(A: np.ndarray, groups: np.ndarray, k: int,
@@ -102,9 +102,9 @@ def group_fair_sc(A: np.ndarray, groups: np.ndarray, k: int,
     """
 
     # Compute the constraint matrix
-    Fair_Mat = compute_F(groups) # An (n x g) float matrix of size h-1 specifying membership to each
-                            # protected group where h is the number of protected groups
-    Z = null_space(Fair_Mat.T)  # null_space_basis
+    R = compute_RD(groups)         # Representation_graph adjacency mat: A (n x n) graph specifying
+                                   # which node can represent which other nodes
+    Z = null_space(R)              # null_space_basis
     assert Z.shape[1] >= k, 'Rank of c_mat is too high'
 
     # Compute the Laplacian
